@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const TaskCalendar = () => {
+            const [data, setData] = useState(() => {
+                const saved = localStorage.getItem('calendarTasks');
+                return saved ? JSON.parse(saved) : {};
+            });
+
+            useEffect(() => {
+                localStorage.setItem('calendarTasks', JSON.stringify(data));
+            }, [data]);
+
+            const getDates = () => {
+                const dates = [];
+                const today = new Date();
+                const start = new Date(today);
+                start.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+                for (let i = 0; i < 35; i++) {
+                    const d = new Date(start);
+                    d.setDate(start.getDate() + i);
+                    dates.push(d.toISOString().split('T')[0]);
+                }
+                return dates;
+            };
+
+            const dates = getDates();
+
+            const toggleTask = (date, id) => {
+                setData(prev => ({
+                    ...prev,
+                    [date]: (prev[date] || []).map(t => t.id === id ? { ...t, completed: !t.completed } : t)
+                }));
+            };
+
+            const toggleAll = (date, status) => {
+                if (!data[date]) return;
+                setData(prev => ({
+                    ...prev,
+                    [date]: prev[date].map(t => ({ ...t, completed: status }))
+                }));
+            };
+
+            const addTask = (date) => {
+                const text = prompt("Nhập công việc:");
+                if (!text) return;
+                setData(prev => ({
+                    ...prev,
+                    [date]: [...(prev[date] || []), { id: Date.now(), text, completed: false }]
+                }));
+            };
+
+            return (
+                <div className="p-4 max-w-6xl mx-auto">
+                    <h1 className="text-2xl font-bold mb-6 text-gray-800">Lịch Công Việc</h1>
+                    <div className="grid grid-cols-7 gap-2">
+                        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
+                            <div key={day} className="font-bold text-center p-2 bg-gray-200 rounded">{day}</div>
+                        ))}
+                        {dates.map(date => {
+                            const tasks = data[date] || [];
+                            const allCompleted = tasks.length > 0 && tasks.every(t => t.completed);
+                            return (
+                                <div key={date} className="border p-2 min-h-[100px] bg-white shadow-sm rounded flex flex-col">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] text-gray-400">{date.slice(5)}</span>
+                                        <input type="checkbox" checked={allCompleted} onChange={(e) => toggleAll(date, e.target.checked)} className="cursor-pointer"/>
+                                    </div>
+                                    <div className="flex-grow space-y-1">
+                                        {tasks.map(t => (
+                                            <div key={t.id} className="flex items-center text-xs">
+                                                <input type="checkbox" checked={t.completed} onChange={() => toggleTask(date, t.id)} className="mr-1"/>
+                                                <span className={t.completed ? "line-through text-gray-400" : ""}>{t.text}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button onClick={() => addTask(date)} className="mt-2 text-[10px] text-blue-500 hover:underline">+ Thêm</button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TaskCalendar />);
+    </script>
+</body>
+</html>
